@@ -1,8 +1,8 @@
 use rand::Rng;
 use std::io;
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap};
 
-// races
+// race
 #[derive(Debug, Clone, Copy)]
 enum Race {
     Human,
@@ -14,6 +14,63 @@ enum Race {
     HalfElf,
     HalfOrc,
     Tiefling,
+}
+
+impl Race {
+    fn ability_bonuses(&self) -> HashMap<Ability, i8> {
+        let mut bonuses = HashMap::new();
+
+        match self {
+            Race::Human => {
+                bonuses.insert(Ability::Strength, 1);
+                bonuses.insert(Ability::Dexterity, 1);
+                bonuses.insert(Ability::Constitution, 1);
+                bonuses.insert(Ability::Intelligence, 1);
+                bonuses.insert(Ability::Wisdom, 1);
+                bonuses.insert(Ability::Charisma, 1);
+            },
+            Race::Elf => {
+                bonuses.insert(Ability::Dexterity, 2);
+            },
+            Race::Dwarf => {
+                bonuses.insert(Ability::Constitution, 2);
+            },
+            Race::Halfling => {
+                bonuses.insert(Ability::Dexterity, 2);
+            },
+            Race::Dragonborn => {
+                bonuses.insert(Ability::Strength, 2);
+                bonuses.insert(Ability::Charisma, 1);
+            },
+            Race::Gnome => {
+                bonuses.insert(Ability::Intelligence, 2);
+            },
+            Race::HalfElf => {
+                bonuses.insert(Ability::Charisma, 2);
+                // Half-Elf gets +1 to two other abilities
+            },
+            Race::HalfOrc => {
+                bonuses.insert(Ability::Strength, 2);
+                bonuses.insert(Ability::Constitution, 1);
+            },
+            Race::Tiefling => {
+                bonuses.insert(Ability::Intelligence, 1);
+                bonuses.insert(Ability::Charisma, 2);
+            },
+        }
+
+        bonuses
+    }
+
+    fn racial_skills(&self) -> Vec<Skill> {
+        match self {
+            Race::Elf => vec![Skill::Perception],
+            Race::Dwarf => vec![Skill::History], // stonecunning
+            Race::Halfling => vec![Skill::Acrobatics], // naturally Nimble
+            Race::HalfOrc => vec![Skill::Intimidation],
+            _ => vec![],
+        }
+    }
 }
 
 // classes
@@ -33,8 +90,47 @@ enum Class {
     Wizard,
 }
 
-// all possible skills
-#[derive(Debug, Hash, Eq, PartialEq, Clone)]
+impl Class {
+    fn hit_die(&self) -> u8 {
+        match self {
+            Class::Barbarian => 12,
+            Class::Fighter | Class::Paladin | Class::Ranger => 10,
+            Class::Bard | Class::Cleric | Class::Druid | Class::Monk | Class::Rogue | Class::Warlock => 8,
+            Class::Sorcerer | Class::Wizard => 6,
+        }
+    }
+
+    fn saving_throws(&self) -> (Ability, Ability) {
+        match self {
+            Class::Barbarian => (Ability::Strength, Ability::Constitution),
+            Class::Bard => (Ability::Dexterity, Ability::Charisma),
+            Class::Cleric => (Ability::Wisdom, Ability::Charisma),
+            Class::Druid => (Ability::Intelligence, Ability::Wisdom),
+            Class::Fighter => (Ability::Strength, Ability::Constitution),
+            Class::Monk => (Ability::Strength, Ability::Dexterity),
+            Class::Paladin => (Ability::Wisdom, Ability::Charisma),
+            Class::Ranger => (Ability::Strength, Ability::Dexterity),
+            Class::Rogue => (Ability::Dexterity, Ability::Intelligence),
+            Class::Sorcerer => (Ability::Constitution, Ability::Charisma),
+            Class::Warlock => (Ability::Wisdom, Ability::Charisma),
+            Class::Wizard => (Ability::Intelligence, Ability::Wisdom),
+        }
+    }
+}
+
+// abilities
+#[derive(Debug, Hash, Eq, PartialEq, Clone, Copy)]
+enum Ability {
+    Strength,
+    Dexterity,
+    Constitution,
+    Intelligence,
+    Wisdom,
+    Charisma,
+}
+
+// skills and their associated abilities
+#[derive(Debug, Hash, Eq, PartialEq, Clone, Copy)]
 enum Skill {
     Acrobatics,
     AnimalHandling,
@@ -56,7 +152,70 @@ enum Skill {
     Survival,
 }
 
-// stats
+impl Skill {
+    fn associated_ability(&self) -> Ability {
+        match self {
+            Skill::Acrobatics => Ability::Dexterity,
+            Skill::AnimalHandling => Ability::Wisdom,
+            Skill::Arcana => Ability::Intelligence,
+            Skill::Athletics => Ability::Strength,
+            Skill::Deception => Ability::Charisma,
+            Skill::History => Ability::Intelligence,
+            Skill::Insight => Ability::Wisdom,
+            Skill::Intimidation => Ability::Charisma,
+            Skill::Investigation => Ability::Intelligence,
+            Skill::Medicine => Ability::Wisdom,
+            Skill::Nature => Ability::Intelligence,
+            Skill::Perception => Ability::Wisdom,
+            Skill::Performance => Ability::Charisma,
+            Skill::Persuasion => Ability::Charisma,
+            Skill::Religion => Ability::Intelligence,
+            Skill::SleightOfHand => Ability::Dexterity,
+            Skill::Stealth => Ability::Dexterity,
+            Skill::Survival => Ability::Wisdom,
+        }
+    }
+}
+
+// backgrounds
+#[derive(Debug, Clone, Copy)]
+enum Background {
+    Acolyte,
+    Charlatan,
+    Criminal,
+    Entertainer,
+    FolkHero,
+    GuildArtisan,
+    Hermit,
+    Noble,
+    Outlander,
+    Sage,
+    Sailor,
+    Soldier,
+    Urchin,
+}
+
+impl Background {
+    fn skills(&self) -> [Skill; 2] {
+        match self {
+            Background::Acolyte => [Skill::Insight, Skill::Religion],
+            Background::Charlatan => [Skill::Deception, Skill::SleightOfHand],
+            Background::Criminal => [Skill::Deception, Skill::Stealth],
+            Background::Entertainer => [Skill::Acrobatics, Skill::Performance],
+            Background::FolkHero => [Skill::AnimalHandling, Skill::Survival],
+            Background::GuildArtisan => [Skill::Insight, Skill::Persuasion],
+            Background::Hermit => [Skill::Medicine, Skill::Religion],
+            Background::Noble => [Skill::History, Skill::Persuasion],
+            Background::Outlander => [Skill::Athletics, Skill::Survival],
+            Background::Sage => [Skill::Arcana, Skill::History],
+            Background::Sailor => [Skill::Athletics, Skill::Perception],
+            Background::Soldier => [Skill::Athletics, Skill::Intimidation],
+            Background::Urchin => [Skill::SleightOfHand, Skill::Stealth],
+        }
+    }
+}
+
+// stats with modifiers
 #[derive(Debug)]
 struct AbilityScores {
     strength: u8,
@@ -67,43 +226,123 @@ struct AbilityScores {
     charisma: u8,
 }
 
+impl AbilityScores {
+    fn modifier(&self, ability: Ability) -> i8 {
+        let score = match ability {
+            Ability::Strength => self.strength,
+            Ability::Dexterity => self.dexterity,
+            Ability::Constitution => self.constitution,
+            Ability::Intelligence => self.intelligence,
+            Ability::Wisdom => self.wisdom,
+            Ability::Charisma => self.charisma,
+        };
+
+        ((score as i8) - 10) / 2
+    }
+
+    fn apply_racial_bonuses(&mut self, race: Race) {
+        let bonuses = race.ability_bonuses();
+
+        for (ability, bonus) in bonuses {
+            match ability {
+                Ability::Strength => self.strength = (self.strength as i8 + bonus) as u8,
+                Ability::Dexterity => self.dexterity = (self.dexterity as i8 + bonus) as u8,
+                Ability::Constitution => self.constitution = (self.constitution as i8 + bonus) as u8,
+                Ability::Intelligence => self.intelligence = (self.intelligence as i8 + bonus) as u8,
+                Ability::Wisdom => self.wisdom = (self.wisdom as i8 + bonus) as u8,
+                Ability::Charisma => self.charisma = (self.charisma as i8 + bonus) as u8,
+            }
+        }
+
+        // handle Half-Elf's floating +1 bonuses
+        if let Race::HalfElf = race {
+            println!("\nHalf-Elves get +1 to two abilities of your choice (excluding Charisma)");
+            for i in 0..2 {
+                println!("\nChoose ability {} to receive +1:", i + 1);
+                println!("1. Strength");
+                println!("2. Dexterity");
+                println!("3. Constitution");
+                println!("4. Intelligence");
+                println!("5. Wisdom");
+
+                loop {
+                    let mut input = String::new();
+                    io::stdin().read_line(&mut input).expect("Failed to read line");
+
+                    match input.trim().parse::<u8>() {
+                        Ok(1) => { self.strength += 1; break; },
+                        Ok(2) => { self.dexterity += 1; break; },
+                        Ok(3) => { self.constitution += 1; break; },
+                        Ok(4) => { self.intelligence += 1; break; },
+                        Ok(5) => { self.wisdom += 1; break; },
+                        _ => println!("Invalid selection. Please choose 1-5."),
+                    }
+                }
+            }
+        }
+    }
+}
+
 // character structure
 #[derive(Debug)]
 struct Character {
     name: String,
     race: Race,
     class: Class,
+    background: Background,
     level: u8,
     abilities: AbilityScores,
     hit_points: u8,
     skills: HashSet<Skill>,
+    expertise: HashSet<Skill>,
+    saving_throws: HashSet<Ability>,
 }
 
 impl Character {
-    // character sheet
+    // display character
     fn display(&self) {
         println!("\n=== CHARACTER SHEET ===");
         println!("Name: {}", self.name);
         println!("Race: {:?}", self.race);
         println!("Class: {:?}", self.class);
+        println!("Background: {:?}", self.background);
         println!("Level: {}", self.level);
+
         println!("\nAbility Scores:");
-        println!("Strength: {}", self.abilities.strength);
-        println!("Dexterity: {}", self.abilities.dexterity);
-        println!("Constitution: {}", self.abilities.constitution);
-        println!("Intelligence: {}", self.abilities.intelligence);
-        println!("Wisdom: {}", self.abilities.wisdom);
-        println!("Charisma: {}", self.abilities.charisma);
+        println!("Strength: {} ({:+})", self.abilities.strength, self.abilities.modifier(Ability::Strength));
+        println!("Dexterity: {} ({:+})", self.abilities.dexterity, self.abilities.modifier(Ability::Dexterity));
+        println!("Constitution: {} ({:+})", self.abilities.constitution, self.abilities.modifier(Ability::Constitution));
+        println!("Intelligence: {} ({:+})", self.abilities.intelligence, self.abilities.modifier(Ability::Intelligence));
+        println!("Wisdom: {} ({:+})", self.abilities.wisdom, self.abilities.modifier(Ability::Wisdom));
+        println!("Charisma: {} ({:+})", self.abilities.charisma, self.abilities.modifier(Ability::Charisma));
+
         println!("\nHit Points: {}", self.hit_points);
 
-        println!("\nSkills:");
+        println!("\nSaving Throw Proficiencies:");
+        for ability in &self.saving_throws {
+            println!("{:?} ({:+})", ability, self.abilities.modifier(*ability) + 2); // +2 for proficiency
+        }
+
+        println!("\nSkill Proficiencies:");
         if self.skills.is_empty() {
             println!("None");
         } else {
             for skill in &self.skills {
-                println!("{:?}", skill);
+                println!("{:?} ({:+}){}",
+                         skill,
+                         self.skill_modifier(*skill),
+                         if self.expertise.contains(skill) { " (Expertise)" } else { "" });
             }
         }
+    }
+
+    // calculate skill modifier
+    fn skill_modifier(&self, skill: Skill) -> i8 {
+        let base = self.abilities.modifier(skill.associated_ability());
+        let proficiency = if self.skills.contains(&skill) { 2 } else { 0 };
+        let expertise = if self.expertise.contains(&skill) { 2 } else { 0 };
+
+        base + proficiency + expertise
     }
 }
 
@@ -138,20 +377,7 @@ fn generate_ability_scores() -> AbilityScores {
     }
 }
 
-// calculate hp based on class and constitution
-fn calculate_hit_points(class: &Class, constitution: u8) -> u8 {
-    let base_hp = match class {
-        Class::Barbarian => 12,
-        Class::Fighter | Class::Paladin | Class::Ranger => 10,
-        Class::Bard | Class::Cleric | Class::Druid | Class::Monk | Class::Rogue | Class::Warlock => 8,
-        Class::Sorcerer | Class::Wizard => 6,
-    };
-
-    let con_mod = (constitution as i32 - 10) / 2;
-    std::cmp::max(1, base_hp + con_mod as u8)
-}
-
-// select race
+// select a race
 fn select_race() -> Race {
     println!("\nSelect a race:");
     println!("1. Human");
@@ -217,6 +443,46 @@ fn select_class() -> Class {
             Ok(11) => return Class::Warlock,
             Ok(12) => return Class::Wizard,
             _ => println!("Invalid selection. Please choose 1-12."),
+        }
+    }
+}
+
+// select a background
+fn select_background() -> Background {
+    println!("\nSelect a background:");
+    println!("1. Acolyte");
+    println!("2. Charlatan");
+    println!("3. Criminal");
+    println!("4. Entertainer");
+    println!("5. Folk Hero");
+    println!("6. Guild Artisan");
+    println!("7. Hermit");
+    println!("8. Noble");
+    println!("9. Outlander");
+    println!("10. Sage");
+    println!("11. Sailor");
+    println!("12. Soldier");
+    println!("13. Urchin");
+
+    loop {
+        let mut input = String::new();
+        io::stdin().read_line(&mut input).expect("Failed to read line");
+
+        match input.trim().parse::<u8>() {
+            Ok(1) => return Background::Acolyte,
+            Ok(2) => return Background::Charlatan,
+            Ok(3) => return Background::Criminal,
+            Ok(4) => return Background::Entertainer,
+            Ok(5) => return Background::FolkHero,
+            Ok(6) => return Background::GuildArtisan,
+            Ok(7) => return Background::Hermit,
+            Ok(8) => return Background::Noble,
+            Ok(9) => return Background::Outlander,
+            Ok(10) => return Background::Sage,
+            Ok(11) => return Background::Sailor,
+            Ok(12) => return Background::Soldier,
+            Ok(13) => return Background::Urchin,
+            _ => println!("Invalid selection. Please choose 1-13."),
         }
     }
 }
@@ -365,73 +631,148 @@ fn get_skill_proficiency_count(class: &Class) -> usize {
 }
 
 // select skills from the available class skills
-fn select_skills(class: &Class) -> HashSet<Skill> {
-    let class_skills = get_class_skills(class);
-    let skill_count = get_skill_proficiency_count(class);
+fn select_skills(class: &Class, background: Background, race: Race) -> HashSet<Skill> {
     let mut selected_skills = HashSet::new();
 
-    println!("\nSelect {} skill proficiencies from:", skill_count);
+    // add background skills
+    let [bg_skill1, bg_skill2] = background.skills();
+    selected_skills.insert(bg_skill1);
+    selected_skills.insert(bg_skill2);
+
+    // add racial skills
+    for skill in race.racial_skills() {
+        selected_skills.insert(skill);
+    }
+
+    // get class skills and count
+    let class_skills = get_class_skills(class);
+    let skill_count = get_skill_proficiency_count(class);
+
+    // if we already have enough skills from background / race, return
+    if selected_skills.len() >= skill_count {
+        return selected_skills;
+    }
+
+    println!("\nSelect {} additional skill proficiencies from:", skill_count - selected_skills.len());
 
     // display available skills with numbers
-    for (i, skill) in class_skills.iter().enumerate() {
+    let mut available_skills = Vec::new();
+    for skill in class_skills {
+        if !selected_skills.contains(&skill) {
+            available_skills.push(skill);
+        }
+    }
+
+    for (i, skill) in available_skills.iter().enumerate() {
         println!("{}. {:?}", i + 1, skill);
     }
 
     while selected_skills.len() < skill_count {
-        println!("\nChoose skill {} (1-{}):", selected_skills.len() + 1, class_skills.len());
+        println!("\nChoose skill {} (1-{}):", selected_skills.len() + 1, available_skills.len());
 
         let mut input = String::new();
         io::stdin().read_line(&mut input).expect("Failed to read line");
 
         match input.trim().parse::<usize>() {
-            Ok(n) if n >= 1 && n <= class_skills.len() => {
-                let skill = class_skills[n - 1].clone();
-                if selected_skills.contains(&skill) {
-                    println!("You've already selected that skill.");
-                } else {
-                    selected_skills.insert(skill);
-                    println!("Skill added.");
-                }
+            Ok(n) if n >= 1 && n <= available_skills.len() => {
+                let skill = available_skills[n - 1];
+                selected_skills.insert(skill);
+                println!("Skill added.");
             },
-            _ => println!("Invalid selection. Please choose a number between 1 and {}.", class_skills.len()),
+            _ => println!("Invalid selection. Please choose a number between 1 and {}.", available_skills.len()),
         }
     }
 
     selected_skills
 }
 
-fn main() {
-    println!("D&D Character Creator");
+// select expertise skills (for Rogues and Bards)
+fn select_expertise(class: &Class, skills: &HashSet<Skill>) -> HashSet<Skill> {
+    let expertise_count = match class {
+        Class::Rogue => 2,
+        Class::Bard => 2,
+        _ => return HashSet::new(),
+    };
 
-    // character name
+    if expertise_count == 0 {
+        return HashSet::new();
+    }
+
+    let mut expertise = HashSet::new();
+
+    println!("\nSelect {} skill(s) for Expertise:", expertise_count);
+
+    // display available skills with numbers
+    let available_skills: Vec<Skill> = skills.iter().copied().collect();
+    for (i, skill) in available_skills.iter().enumerate() {
+        println!("{}. {:?}", i + 1, skill);
+    }
+
+    while expertise.len() < expertise_count {
+        println!("\nChoose expertise skill {} (1-{}):", expertise.len() + 1, available_skills.len());
+
+        let mut input = String::new();
+        io::stdin().read_line(&mut input).expect("Failed to read line");
+
+        match input.trim().parse::<usize>() {
+            Ok(n) if n >= 1 && n <= available_skills.len() => {
+                let skill = available_skills[n - 1];
+                expertise.insert(skill);
+                println!("Expertise added.");
+            },
+            _ => println!("Invalid selection. Please choose a number between 1 and {}.", available_skills.len()),
+        }
+    }
+
+    expertise
+}
+
+fn main() {
+    println!("D&D 5e Character Creator");
+
+    // get character name
     println!("\nEnter your character's name:");
     let mut name = String::new();
     io::stdin().read_line(&mut name).expect("Failed to read line");
     let name = name.trim().to_string();
 
-    // select race and class
+    // select race, class, and background
     let race = select_race();
     let class = select_class();
+    let background = select_background();
 
-    // ability scores
+    // generate ability scores and apply racial bonuses
     println!("\nRolling ability scores (4d6 drop lowest)...");
-    let abilities = generate_ability_scores();
+    let mut abilities = generate_ability_scores();
+    abilities.apply_racial_bonuses(race);
 
-    // calculate hp
-    let hit_points = calculate_hit_points(&class, abilities.constitution);
+    // calculate hit points
+    let hit_points = class.hit_die() + ((abilities.constitution as i8 - 10) / 2) as u8;
 
     // select skills
-    let skills = select_skills(&class);
+    let skills = select_skills(&class, background, race);
+
+    // select expertise if applicable
+    let expertise = select_expertise(&class, &skills);
+
+    // get saving throw proficiencies
+    let (saving_throw1, saving_throw2) = class.saving_throws();
+    let mut saving_throws = HashSet::new();
+    saving_throws.insert(saving_throw1);
+    saving_throws.insert(saving_throw2);
 
     // create level 1 character
     let character = Character {
         name,
         race,
         class,
+        background,
         level: 1,
         abilities,
         hit_points,
         skills,
+        expertise,
+        saving_throws,
     };
 
     // display character sheet
